@@ -30,7 +30,6 @@ def DNNPipe(N, C, M, U, E, R, conditions=['lb', 'ub']):
     T_max_opt = INF
     for S in D_sub_total:
         for u in set(D) - set(S):
-            if DEBUG: print(S, u)
             new_S = tuple(sorted(list(S)+[u]))
             for i in range(len(S)+1, U+1):
                 for j in range(i, U+1): 

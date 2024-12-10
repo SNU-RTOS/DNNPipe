@@ -10,6 +10,7 @@ import os
 from tensorflow.keras.models import load_model
 from DNNPipe import DNNPipe
 import json
+import argparse
 
 def load_config(file_path='config.json'):
     with open(file_path, 'r') as f:
@@ -96,7 +97,7 @@ def prepare_next_stage_inputs(sub_model, stage_outputs):
         next_inputs[layer_name] = actual_output
     return next_inputs
 
-def save_models(sub_model, stage_num, output_dir="partitioned_submodels", coral=False):
+def save_models(output_dir, sub_model, stage_num, coral=False):
     converter = tf.lite.TFLiteConverter.from_keras_model(sub_model)
     if coral:
         converter.target_spec.supported_ops = [
@@ -109,13 +110,21 @@ def save_models(sub_model, stage_num, output_dir="partitioned_submodels", coral=
     print(f"Saved tflite model to: {tflite_path}")
     return tflite_model
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Pipeline Stage')
+    parser.add_argument('--config', type=str, required=True, help='Device and model configuration file path')
+    parser.add_argument('--model', type=str, required=True, help='Path to original h5 model')
+    parser.add_argument('--output_dir', type=str, default='0.0.0.0', help='Directory to save the partitioned sub-models')
+    return parser.parse_args()
+
 def main():
-    N, C, M, U, E, R = load_config()
+    args = parse_arguments()
+    N, C, M, U, E, R = load_config(args.config)
     P = DNNPipe(N, C, M, U, E, R)
     partitioning_points = [P[0][0]] 
     for t in P:
         partitioning_points.append(t[1])
-    model = load_model('efficientnetv2b0.h5')
+    model = load_model(args.model)
     sample_input = create_sample_input()
     num_stages = len(partitioning_points) - 1
     sub_models = []
@@ -133,7 +142,7 @@ def main():
         )
         sub_models.append(sub_model)
         use_coral = (P[i][2] == 3 or 4)
-        tflite_models.append(save_models(sub_model, i, coral=use_coral))
+        tflite_models.append(save_models(args.output_dir, sub_model, i, coral=use_coral))
 
     with open('pipeline_plan.json', 'w') as f:
         json.dump({'pipeline_plan': P}, f)

@@ -62,7 +62,7 @@ class PipelineStage:
         self.lock = threading.Lock()
 
     def receiver(self):
-        if self.stage_num == 'f':
+        if self.next_port == None:
             logger.info("First stage: Loading preprocessed data")
             for _ in range(NUM_INPUTS):
                 data = self.dataset[self.current_idx]
@@ -95,7 +95,7 @@ class PipelineStage:
             logger.debug(f"Inference time for input {i+1}: {time.time()-infer_time_start:.4f}s")
 
     def sender(self):
-        if self.stage_num == 'l':
+        if self.stage_num == 1:
             logger.info("Last stage: Collecting results")
             for i in range(NUM_INPUTS):
                 tensor = self.output_queue.get()
@@ -133,29 +133,23 @@ class PipelineStage:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Pipeline Stage')
-    parser.add_argument('--stage', type=str, required=True, help='first: f, intermidiate: i, last: l')
-    parser.add_argument('--model', type=str, required=True, help='Path to TFLite model')
-    parser.add_argument('--prev-host', type=str, default='0.0.0.0', help='Previous stage host')
-    parser.add_argument('--prev-port', type=int, default=None, help='Previous stage port')
+    parser.add_argument('--stage', type=int, required=True, help='Stage number')
+    parser.add_argument('--bind-host', type=str, default='0.0.0.0', help='Binding address for connection')
+    parser.add_argument('--bind-port', type=int, default=None, help='Binding port for connection')
     parser.add_argument('--next-host', type=str, default=None, help='Next stage host')
     parser.add_argument('--next-port', type=int, default=None, help='Next stage port')
-    parser.add_argument('--data-path', type=int, default=None, help='Next stage port')
+    parser.add_argument('--data-path', type=str, default=None, help='Input dataset path')
     return parser.parse_args()
 
 def main():
     args = parse_arguments()
     logger.info(f"Starting pipeline stage {args.stage}")
-    logger.info(f"Model path: {args.model}")
-    logger.info(f"Previous stage: {args.prev_host}:{args.prev_port}")
-    if args.next_host and args.next_port:
-        logger.info(f"Next stage: {args.next_host}:{args.next_port}")
 
     model_path = f'partitioned_models/sub_model_{args.model}.tflite'
     stage = PipelineStage(
         stage_num=args.stage,
-        model_path=model_path,
-        prev_host=args.prev_host,
-        prev_port=args.prev_port,
+        bind_addr=args.bind_addr,
+        bind_port=args.bind_port,
         next_host=args.next_host,
         next_port=args.next_port,
         data_path=args.data_path,
