@@ -36,7 +36,7 @@ def receive_tensor(sock, shape, dtype=np.float32):
     return np.frombuffer(data, dtype=dtype).reshape(shape)
 
 class PipelineStage:
-    def __init__(self, stage_num, model_path, prev_host, prev_port, next_host, next_port, data_path):
+    def __init__(self, stage_num, model_path, bind_addr, bind_port, next_host, next_port, data_path):
         self.stage_num = stage_num
         self.model_path = model_path
         
@@ -52,8 +52,8 @@ class PipelineStage:
         self.dataset = h5py.File(data_path, 'r')['images']
         self.current_idx = 0
         
-        self.prev_host = prev_host
-        self.prev_port = prev_port
+        self.bind_addr = bind_addr
+        self.bind_port = bind_port
         self.next_host = next_host
         self.next_port = next_port
         self.input_queue = queue.Queue()
@@ -71,8 +71,8 @@ class PipelineStage:
                 self.input_queue.put(input_data)
         else:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.bind((self.prev_host, self.prev_port))
-                logger.info(f"Waiting for connection on {self.prev_host}:{self.prev_port}")
+                sock.bind((self.bind_addr, self.bind_port))
+                logger.info(f"Waiting for connection on {self.bind_addr}:{self.bind_port}")
                 sock.listen(1)
                 conn, addr = sock.accept()
                 logger.info(f"Connected from previous stage: {addr}")
