@@ -1,0 +1,28 @@
+{
+    "devices": [
+        {
+            "device_id": 1,
+            "host": "192.168.100.58",
+            "username": "rtos",
+            "password": "rtos8370"
+        },
+        {
+            "device_id": 2,
+            "host": "192.168.100.60",
+            "username": "eselab",
+            "password": "1"
+        },
+        {
+            "device_id": 3,
+            "host": "192.168.100.59",
+            "username": "mendel",
+            "password": "mendel"
+        },
+        {
+            "device_id": 4,
+            "host": "192.168.100.61",
+            "username": "mendel",
+            "password": "mendel"
+        }
+    ]
+}
