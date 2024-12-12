@@ -13,7 +13,7 @@ import time
 import tensorflow.lite as tflite
 import argparse
 import logging
-from loader import PreprocessedDataLoader
+import h5py
 
 logging.basicConfig(
     level=logging.DEBUG, 
@@ -48,8 +48,8 @@ class PipelineStage:
         
         self.input_shape = self.input_details[0]['shape']
         self.output_shape = self.output_details[0]['shape']
-        
-        self.dataset = h5py.File(data_path, 'r')['images']
+        if data_path:
+            self.dataset = h5py.File(data_path, 'r')['images']
         self.current_idx = 0
         
         self.bind_addr = bind_addr
@@ -62,7 +62,7 @@ class PipelineStage:
         self.lock = threading.Lock()
 
     def receiver(self):
-        if self.next_port == None:
+        if self.bind_addr == None:
             logger.info("First stage: Loading preprocessed data")
             for _ in range(NUM_INPUTS):
                 data = self.dataset[self.current_idx]
@@ -95,7 +95,7 @@ class PipelineStage:
             logger.debug(f"Inference time for input {i+1}: {time.time()-infer_time_start:.4f}s")
 
     def sender(self):
-        if self.stage_num == 1:
+        if self.stage_num == 4:
             logger.info("Last stage: Collecting results")
             for i in range(NUM_INPUTS):
                 tensor = self.output_queue.get()
@@ -134,7 +134,7 @@ class PipelineStage:
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Pipeline Stage')
     parser.add_argument('--stage', type=int, required=True, help='Stage number')
-    parser.add_argument('--bind-host', type=str, default='0.0.0.0', help='Binding address for connection')
+    parser.add_argument('--bind-addr', type=str, default='0.0.0.0', help='Binding address for connection')
     parser.add_argument('--bind-port', type=int, default=None, help='Binding port for connection')
     parser.add_argument('--next-host', type=str, default=None, help='Next stage host')
     parser.add_argument('--next-port', type=int, default=None, help='Next stage port')
@@ -145,9 +145,10 @@ def main():
     args = parse_arguments()
     logger.info(f"Starting pipeline stage {args.stage}")
 
-    model_path = f'partitioned_models/sub_model_{args.model}.tflite'
+    model_path = f'partitioned_submodels/sub_model_{args.stage}.tflite'
     stage = PipelineStage(
         stage_num=args.stage,
+        model_path=model_path,
         bind_addr=args.bind_addr,
         bind_port=args.bind_port,
         next_host=args.next_host,
