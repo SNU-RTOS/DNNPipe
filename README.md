@@ -21,19 +21,19 @@ The system consists of three main components:
   - Input: DNN model in H5 format, configuration file in JSON
   - Output: Pipeline plan, Partitioned sub-models in TFLite format
   ```bash
-  python model_partitioner.py --model efficientnetv2b0.h5 --config config.json --output_dir ./partitioned_submodels/
+  python model_partitioner.py --model-path ./original_models --config ./configurations --output-dir ./partitioned_submodels --model-name model
   ```
 2. The deployer (`deployer.py`): Distributes partitioned models across IoT nodes
   - Input: Device registry in JSON, Pipeline plan in JSON, partitiond sub-models
   - Output: None
   ```bash
-  python deployer.py --device-registry device_registry.json --plan pipline_plan.json --model_path ./partitioned_submodels/
+  python deployer.py --device-registry ./configurations/device_registry.json --model-path ./partitioned_submodels/ --model-name model
   ```
 3. The runtime engine (`runtime_engine.py`): Executes pipelined inference
   - Input: stage number, binding address for connection, binding port for connection, ip address of next stage, port address of next stage, dataset path
   - Output: None
   ```bash
-  python runtime_engine.py --stage 2 --prev-host 0.0.0.0 --prev-port 50001 --next-host 192.168.100.61 --next-port 50002
+  python runtime_engine.py --stage 2 --model-path partitioned_submodels --bind-addr 0.0.0.0 --bind-port 50000 --next-host 192.168.100.61 --next-port 50001 --data-path dataset.h5 --model-name model
   ```
 ## Device and Model Configuration Guide
 	-"device_config": Device configuration parameters 

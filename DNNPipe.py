@@ -8,6 +8,7 @@ from itertools import combinations
 import math
 import time
 import numpy as np
+import json
 
 INF = math.inf
 def DNNPipe(N, C, M, U, E, R, conditions=['lb', 'ub']): 
@@ -47,3 +48,21 @@ def DNNPipe(N, C, M, U, E, R, conditions=['lb', 'ub']):
                             T_max_opt = T_max
                             P_opt = P[(j, new_S)]
     return P_opt
+
+def load_config(file_path='config.json'):
+    with open(file_path, 'r') as f:
+        config = json.load(f)
+    
+    N = config['device_config']['N']
+    C = config['device_config']['C']
+    M = config['device_config']['M']
+    U = config['model_config']['U']
+    E = config['model_config']['E']
+    R = config['model_config']['R']
+    
+    return N, C, M, U, E, R
+
+if __name__ == "__main__":
+    N, C, M, U, E, R = load_config('./configurations copy/vit/config.json')
+    dp_result = DNNPipe(N, C, M, U, E, R)
+    print(dp_result)

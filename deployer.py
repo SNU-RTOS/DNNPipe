@@ -31,18 +31,19 @@ class DeviceRegistry:
         return None
 
 class Deployer:
-    def __init__(self, registry, plan, model_path):
+    def __init__(self, registry, model_path, model_name):
         self.registry = registry
         self.logger = logging.getLogger(__name__)
-        self.partition_mapping = self._load_partition_mapping(plan)
+        self.model_name = model_name
+        self.partition_mapping = self._load_partition_mapping()
         self.model_path = model_path
         self.model_device_mapping = {
             idx+1: device_id 
             for idx, (_, _, device_id) in enumerate(self.partition_mapping)
         }
     
-    def _load_partition_mapping(self, plan):
-        with open(plan, 'r') as f:
+    def _load_partition_mapping(self):
+        with open(f'./configurations/{self.model_name}/pipeline_plan.json', 'r') as f:
             data = json.load(f)
             return data['pipeline_plan']
 
@@ -66,11 +67,11 @@ class Deployer:
                 password=device['password']
             )
 
-            stdin, stdout, stderr = ssh.exec_command('mkdir -p DNNPipe/partitioned_models')
+            stdin, stdout, stderr = ssh.exec_command('mkdir -p DNNPipe/partitioned_submodels')
             
             with SCPClient(ssh.get_transport()) as scp:
-                local_path = f"{self.model_path}/sub_model_{model_num}.tflite"
-                remote_path = f"DNNPipe/{self.model_path}/sub_model_{model_num}.tflite"
+                local_path = f"{self.model_path}/{self.model_name}/sub_model_{model_num}.tflite"
+                remote_path = f"~/DNNPipe/{self.model_path}/{self.model_name}/sub_model_{model_num}.tflite"
                 
                 self.logger.info(f"Transferring {local_path} to {device['host']}:{remote_path}")
                 scp.put(local_path, remote_path)
@@ -84,9 +85,9 @@ class Deployer:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Pipeline Stage')
-    parser.add_argument('--device_registry', type=str, required=True, help='Device registry file')
-    parser.add_argument('--plan', type=str, required=True, help='Path to original h5 model')
-    parser.add_argument('--model_path', type=str, default='0.0.0.0', help='Path of the partitioned sub-models')
+    parser.add_argument('--device-registry', type=str, required=True, help='Device registry file')
+    parser.add_argument('--model-path', type=str, default='0.0.0.0', help='Path of the partitioned sub-models')
+    parser.add_argument('--model-name', type=str, required=True, help='Name of model to deploy')
     return parser.parse_args()
 
 
@@ -94,7 +95,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     args = parse_arguments()
     registry = DeviceRegistry(args.device_registry)
-    deployer = Deployer(registry, args.plan, args.model_path)
+    deployer = Deployer(registry, args.model_path, args.model_name)
     deployer.deploy_models()
 
 if __name__ == "__main__":
